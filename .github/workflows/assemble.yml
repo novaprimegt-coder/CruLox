@@ -19,10 +19,20 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          cat payload/part-* > /tmp/crulox-site.b64
-          base64 --decode /tmp/crulox-site.b64 > /tmp/crulox-site.gz
-          gzip --decompress --stdout /tmp/crulox-site.gz > index.html
-          echo '33076c38e7a1456d6c8b66618592ea979957148e450213183fd44a114638925f  index.html' | sha256sum --check --strict
+          cat payload/part-* > /tmp/crulox-site.b85
+          python3 - <<'PY'
+          from pathlib import Path
+          import base64, lzma, hashlib
+          encoded = Path('/tmp/crulox-site.b85').read_text()
+          compressed = base64.b85decode(encoded.encode('ascii'))
+          data = lzma.decompress(compressed, format=lzma.FORMAT_XZ)
+          expected = '33076c38e7a1456d6c8b66618592ea979957148e450213183fd44a114638925f'
+          actual = hashlib.sha256(data).hexdigest()
+          if actual != expected:
+              raise SystemExit(f'SHA-256 mismatch: {actual}')
+          Path('index.html').write_bytes(data)
+          print(f'Verified exact CRULOX build: {actual}')
+          PY
 
       - name: Publish exact file and clean transfer payload
         shell: bash
