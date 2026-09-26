@@ -1,46 +1,7 @@
-<!DOCTYPE html>
-<html lang="es">
-<head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-<title>CRULOX</title>
-</head>
-<body style="margin:0;background:#050a12;color:#f4f8ff;font-family:system-ui,sans-serif">
-<script>
-(async()=>{
-  'use strict';
-  const SOURCE='./store-base.html';
-  const EXPECTED_SOURCE='33076c38e7a1456d6c8b66618592ea979957148e450213183fd44a114638925f';
-  const EXPECTED_RESULT='c26568c883755e66ceb21a6194ca34c66c841d4b6863bb1350fbf0286a59ef9e';
-  const sha256=async text=>{
-    const bytes=new TextEncoder().encode(text);
-    const hash=await crypto.subtle.digest('SHA-256',bytes);
-    return [...new Uint8Array(hash)].map(b=>b.toString(16).padStart(2,'0')).join('');
-  };
-  try{
-    const response=await fetch(SOURCE,{cache:'no-store'});
-    if(!response.ok)throw new Error('No se pudo cargar la tienda ('+response.status+')');
-    let html=await response.text();
-    const sourceHash=await sha256(html);
-    if(sourceHash!==EXPECTED_SOURCE)throw new Error('La base de la tienda no coincide con la versión verificada.');
-    const old="if(img.getAttribute('src')!==BRAND_LOGO)img.src=BRAND_LOGO;";
-    const replacement="if(img.getAttribute('src')!==BRAND_LOGO_FULL)img.src=BRAND_LOGO_FULL;";
-    const count=(html.split(old).length-1);
-    if(count!==1)throw new Error('No se encontró de forma única la referencia anterior del logo.');
-    html=html.replace(old,replacement);
-    const symbol=/const CRUZCLICK_SYMBOL_V371='data:image\/webp;base64,[^']+';/;
-    if(!symbol.test(html))throw new Error('No se encontró la sustitución antigua de cabecera/portada.');
-    html=html.replace(symbol,'const CRUZCLICK_SYMBOL_V371=BRAND_LOGO_FULL;');
-    const resultHash=await sha256(html);
-    if(resultHash!==EXPECTED_RESULT)throw new Error('La corrección del logo no coincide con la versión verificada.');
-    document.open();
-    document.write(html);
-    document.close();
-  }catch(error){
-    console.error(error);
-    document.body.innerHTML='<main style="min-height:100vh;display:grid;place-items:center;padding:24px;text-align:center"><div><h1 style="font-size:1.1rem">CRULOX</h1><p style="opacity:.7;font-size:.9rem">No fue posible cargar la tienda. Recarga la página.</p></div></main>';
-  }
-})();
-</script>
-</body>
-</html>
+---
+layout: null
+---
+{% capture store %}{% include_relative store-base.html %}{% endcapture %}
+{% assign store = store | replace: "if(img.getAttribute('src')!==BRAND_LOGO)img.src=BRAND_LOGO;", "if(img.getAttribute('src')!==BRAND_LOGO_FULL)img.src=BRAND_LOGO_FULL;" %}
+{% assign store = store | replace: "if(img.src!==CRUZCLICK_SYMBOL_V371)img.src=CRUZCLICK_SYMBOL_V371;", "if(img.src!==BRAND_LOGO_FULL)img.src=BRAND_LOGO_FULL;" %}
+{{ store }}
