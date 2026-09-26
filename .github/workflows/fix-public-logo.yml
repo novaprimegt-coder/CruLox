@@ -12,12 +12,22 @@ jobs:
   fix-logo:
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout
-        uses: actions/checkout@v4
+      - name: Clone current repository with native Git
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          rm -rf work
+          git clone "https://x-access-token:${GH_TOKEN}@github.com/${GITHUB_REPOSITORY}.git" work
+          cd work
+          git checkout main
 
       - name: Replace only public brand logo overrides
         shell: bash
         run: |
+          set -euo pipefail
+          cd work
           python - <<'PY'
           from pathlib import Path
           import re
@@ -47,13 +57,14 @@ jobs:
           print('Logo-only patch applied successfully.')
           PY
 
-      - name: Commit exact logo-only correction
+      - name: Commit exact logo-only correction and remove temporary workflow
         shell: bash
         run: |
           set -euo pipefail
+          cd work
           git config user.name 'github-actions[bot]'
           git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
           git add index.html
           git rm .github/workflows/fix-public-logo.yml
           git commit -m 'Use official full CRULOX logo in public store'
-          git push
+          git push origin main
