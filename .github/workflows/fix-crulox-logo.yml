@@ -12,13 +12,14 @@ jobs:
   fix-logo:
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-
-      - name: Replace only the visible brand logo references
+      - name: Patch and publish only the CRULOX logo
         shell: bash
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           set -euo pipefail
+          git clone "https://x-access-token:${GH_TOKEN}@github.com/${GITHUB_REPOSITORY}.git" repo
+          cd repo
           python3 - <<'PY'
           from pathlib import Path
           import re, hashlib
@@ -45,15 +46,10 @@ jobs:
               raise SystemExit(f'Unexpected resulting SHA-256: {new_sha}')
           print('Logo-only patch verified:', new_sha)
           PY
-
-      - name: Commit exact logo-only correction and remove this temporary workflow
-        shell: bash
-        run: |
-          set -euo pipefail
           git config user.name 'github-actions[bot]'
           git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
           git rm .github/workflows/fix-crulox-logo.yml
           git add index.html
           git diff --cached --check
           git commit -m 'Replace visible CRULOX symbol with official full logo'
-          git push
+          git push origin main
